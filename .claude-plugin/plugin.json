@@ -1,0 +1,10 @@
+{
+  "name": "oturum-fisi",
+  "version": "1.0.0",
+  "description": "Session receipts for Claude Code: every session becomes one searchable line, written by a SessionEnd hook. No model, no cloud, stdlib Python.",
+  "author": { "name": "melikcanuk" },
+  "homepage": "https://github.com/melikcanuk/oturum-fisi",
+  "repository": "https://github.com/melikcanuk/oturum-fisi",
+  "license": "MIT",
+  "keywords": ["memory", "sessions", "hooks", "transcripts", "tokens"]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "oturum-fisi",
+  "owner": { "name": "melikcanuk" },
+  "plugins": [
+    {
+      "name": "oturum-fisi",
+      "source": "./",
+      "description": "Session receipts for Claude Code: one line per session, kept up to date by a SessionEnd hook."
+    }
+  ]
+}
