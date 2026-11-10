@@ -65,7 +65,7 @@ python skills/oturum-fisi/fis.py --measure          # compression numbers for yo
 | `--measure` | print sizes and ratios (alias `--olc`) |
 | `--only PATH` | index one transcript; `--only -` reads the hook's JSON from stdin |
 
-`--recall` prints a small receipt (`SAVED -832.422 token`) in the terminal and saves the same receipt as a thermal-paper image, `son-fis.svg`, in the receipts folder. The receipt also shows the ratio (e.g. `~903x less token` for that lookup) and what the avoided tokens would cost at the Claude Opus 5.5 API input price ($4 per million tokens; change it with `OTURUM_FISI_USD_PER_MTOK`). The saving applies to recalling past sessions, not to the rest of your usage. It also ends with a note estimating the tokens it avoided (characters ÷ 4, assuming the matched transcripts would otherwise have been read in full). It is an estimate, not a billing figure. Notes add up in `kazanc.log`.
+`--recall` prints a small receipt (`SAVED -832.422 token`) in the terminal and saves the same receipt as a thermal-paper image, `son-fis.svg`, in the receipts folder. The receipt also shows the ratio (e.g. `~903x less token` for that lookup) and what the avoided tokens would cost at the Claude Fable 5.1 API input price ($10 per million tokens; change it with `OTURUM_FISI_USD_PER_MTOK`). The saving applies to recalling past sessions, not to the rest of your usage. It also ends with a note estimating the tokens it avoided (characters ÷ 4, assuming the matched transcripts would otherwise have been read in full). It is an estimate, not a billing figure. Notes add up in `kazanc.log`.
 
 ## Privacy
 

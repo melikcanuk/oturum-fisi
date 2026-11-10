@@ -134,7 +134,7 @@ def hatirla(db, out, sorgu):
         f.write(f"{datetime.now():%Y-%m-%d %H:%M} sorgu={sorgu!r} eslesen={len(hits)} okunan={okunan} tam={tam} kazanc={kazanc}\n")
     print(f"\nNot: {len(hits)} fis okundu (~{okunan} token). Tam sohbetleri okumak ~{tam} token tutardi; "
           f"~{kazanc} token olasi israf onlendi. Toplam birikmis olasi kazanc: ~{toplam} token. (tahmin: karakter/4, tum sohbetin okunacagi varsayimiyla; fatura olcumu degil)")
-    usd = float(os.environ.get("OTURUM_FISI_USD_PER_MTOK", "4"))  # Opus 5.5 API input price, Oct 2026
+    usd = float(os.environ.get("OTURUM_FISI_USD_PER_MTOK", "10"))  # Fable 5.1 API input price, Oct 2026
     rows = dict(zaman=f"{datetime.now():%Y-%m-%d %H:%M}", sorgu=sorgu, eslesen=len(hits),
                 okunan=okunan, tam=tam, kazanc=kazanc, toplam=toplam, usd=usd,
                 oran=(tam // okunan) if okunan else 0)
@@ -180,7 +180,7 @@ def fis_svg(r):
             ("lr", "API fiyatıyla", f"{para(r['tam'], r['usd'])} → {para(r['okunan'], r['usd'])}", 22, 400),
             ("lr", "toplam", f"−{tr(r['toplam'])} token", 22, 600), ("rule",),
             ("l", "tahmin: karakter/4, tüm sohbet okunsaydı", 16, 400),
-            ("l", f"fiyat: {r['usd']:g} $ / 1M girdi token (Opus 5.5 API)", 16, 400)]
+            ("l", f"fiyat: {r['usd']:g} $ / 1M girdi token (Fable 5.1 API)", 16, 400)]
     y, el = 70, []
     for b in body:
         k = b[0]
