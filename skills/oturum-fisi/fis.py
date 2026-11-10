@@ -134,6 +134,79 @@ def hatirla(db, out, sorgu):
         f.write(f"{datetime.now():%Y-%m-%d %H:%M} sorgu={sorgu!r} eslesen={len(hits)} okunan={okunan} tam={tam} kazanc={kazanc}\n")
     print(f"\nNot: {len(hits)} fis okundu (~{okunan} token). Tam sohbetleri okumak ~{tam} token tutardi; "
           f"~{kazanc} token olasi israf onlendi. Toplam birikmis olasi kazanc: ~{toplam} token. (tahmin: karakter/4, tum sohbetin okunacagi varsayimiyla; fatura olcumu degil)")
+    rows = dict(zaman=f"{datetime.now():%Y-%m-%d %H:%M}", sorgu=sorgu, eslesen=len(hits),
+                okunan=okunan, tam=tam, kazanc=kazanc, toplam=toplam)
+    print("\n" + fis_metin(rows))
+    svg = out / "son-fis.svg"
+    svg.write_text(fis_svg(rows), encoding="utf-8")
+    print(f"Fis gorseli: {svg}")
+
+def tr(n):  # 125504 -> 125.504
+    return f"{n:,}".replace(",", ".")
+
+def fis_metin(r, w=34):
+    """Terminal receipt drawn with plain characters."""
+    def line(a, b=""):
+        return "| " + a + " " * max(1 if b else 0, w - 4 - len(a) - len(b)) + b + " |"
+    sorgu = r["sorgu"] if len(r["sorgu"]) <= w - 14 else r["sorgu"][:w - 17] + "..."
+    rows = [" " + "_" * (w - 2), line("oturum fisi".center(w - 4)), line(r["zaman"], f'"{sorgu}"'),
+            line("-" * (w - 4)),
+            line("okunan fis", str(r["eslesen"])), line("okunan", f"~{tr(r['okunan'])} tok"),
+            line("tam sohbet", f"~{tr(r['tam'])} tok"), line("=" * (w - 4)),
+            line("SAVED", f"-{tr(r['kazanc'])} token"), line("toplam", f"-{tr(r['toplam'])} token"),
+            line("-" * (w - 4)), line("tahmin: karakter/4"), " " + "/\\" * ((w - 2) // 2)]
+    return "\n".join(rows)
+
+def fis_svg(r):
+    """Thermal-paper receipt as a standalone SVG (no dependencies)."""
+    from html import escape
+    W, pad = 520, 44
+    ink, paper, mark = "#26231f", "#f3f0e8", "#f2ea3b"
+    body = [("c", "oturum fişi", 40, 600), ("gap", 18),
+            ("lr", r["zaman"], "", 20, 400), ("l", f'“{r["sorgu"]}”', 24, 600), ("rule",),
+            ("lr", "okunan fiş", str(r["eslesen"]), 22, 400),
+            ("lr", "okunan", f"~{tr(r['okunan'])} token", 22, 400),
+            ("lr", "tam sohbet", f"~{tr(r['tam'])} token", 22, 400), ("rule",), ("gap", 8),
+            ("big", f"−{tr(r['kazanc'])}", 64), ("c", "token saved", 26, 600), ("gap", 14),
+            ("lr", "toplam", f"−{tr(r['toplam'])} token", 22, 600), ("rule",),
+            ("l", "tahmin: karakter/4, tüm sohbet okunsaydı", 16, 400)]
+    y, el = 70, []
+    for b in body:
+        k = b[0]
+        if k == "gap":
+            y += b[1]; continue
+        if k == "rule":
+            y += 22
+            el.append(f'<line x1="{pad}" y1="{y}" x2="{W - pad}" y2="{y}" stroke="{ink}" stroke-width="2" stroke-dasharray="7 6"/>')
+            y += 30; continue
+        if k == "big":
+            y += b[2]
+            tw = len(b[1]) * b[2] * 0.6
+            el.append(f'<path d="M{W/2 - tw/2 - 16} {y - b[2]*0.78} L{W/2 + tw/2 + 14} {y - b[2]*0.84} L{W/2 + tw/2 + 18} {y + 12} '
+                      f'L{W/2 - tw/2 - 12} {y + 16} Z" fill="{mark}" style="mix-blend-mode:multiply"/>')
+            el.append(f'<text x="{W/2}" y="{y}" font-size="{b[2]}" font-weight="600" text-anchor="middle">{escape(b[1])}</text>')
+            y += 18; continue
+        size = b[3] if k == "lr" else b[2]
+        weight = b[4] if k == "lr" else b[3]
+        y += size + 10
+        if k == "c":
+            el.append(f'<text x="{W/2}" y="{y}" font-size="{size}" font-weight="{weight}" text-anchor="middle">{escape(b[1])}</text>')
+        elif k == "l":
+            el.append(f'<text x="{pad}" y="{y}" font-size="{size}" font-weight="{weight}">{escape(b[1])}</text>')
+        else:
+            el.append(f'<text x="{pad}" y="{y}" font-size="{size}" font-weight="{weight}">{escape(b[1])}</text>'
+                      f'<text x="{W - pad}" y="{y}" font-size="{size}" font-weight="{weight}" text-anchor="end">{escape(b[2])}</text>')
+    H = y + 70
+    teeth = " ".join(f"L{x} {H - (12 if i % 2 else 0)}" for i, x in enumerate(range(W, -1, -20)))
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">'
+            f'<defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9 .25" numOctaves="2" seed="4"/>'
+            f'<feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .06 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>'
+            f'<linearGradient id="curl" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".10"/>'
+            f'<stop offset=".06" stop-color="#000" stop-opacity="0"/><stop offset=".94" stop-color="#000" stop-opacity="0"/>'
+            f'<stop offset="1" stop-color="#000" stop-opacity=".12"/></linearGradient></defs>'
+            f'<path d="M0 0 L{W} 0 {teeth} Z" fill="{paper}"/>'
+            f'<path d="M0 0 L{W} 0 {teeth} Z" fill="url(#curl)"/><path d="M0 0 L{W} 0 {teeth} Z" filter="url(#grain)"/>'
+            f'<g fill="{ink}" font-family="\'IBM Plex Mono\', Consolas, \'Courier New\', monospace">{"".join(el)}</g></svg>')
 
 def main():
     ap = argparse.ArgumentParser()

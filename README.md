@@ -65,7 +65,7 @@ python skills/oturum-fisi/fis.py --measure          # compression numbers for yo
 | `--measure` | print sizes and ratios (alias `--olc`) |
 | `--only PATH` | index one transcript; `--only -` reads the hook's JSON from stdin |
 
-`--recall` ends with a note estimating the tokens it avoided (characters ÷ 4, assuming the matched transcripts would otherwise have been read in full). It is an estimate, not a billing figure. Notes add up in `kazanc.log`.
+`--recall` prints a small receipt (`SAVED -832.422 token`) in the terminal and saves the same receipt as a thermal-paper image, `son-fis.svg`, in the receipts folder. It also ends with a note estimating the tokens it avoided (characters ÷ 4, assuming the matched transcripts would otherwise have been read in full). It is an estimate, not a billing figure. Notes add up in `kazanc.log`.
 
 ## Privacy
 
