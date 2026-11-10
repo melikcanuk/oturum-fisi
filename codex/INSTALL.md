@@ -35,7 +35,7 @@ Codex does not expand `${CLAUDE_SKILL_DIR}`. In the copied `~/.agents/skills/otu
 
 Codex has no session-end event, so the hook runs on `Stop` (after every reply). It re-reads only the current session and takes well under a second; its first run indexes all past Claude Code and Codex sessions once (about 10 s for ~100 sessions).
 
-Back up `~/.codex/config.toml`, then append (fill in `PY` and the home path; these are double-quoted TOML strings, so write every Windows backslash as `\`):
+Back up `~/.codex/config.toml`, then append (fill in `PY` and the home path; these are double-quoted TOML strings, so write every Windows backslash as `\\`):
 
 ```toml
 [[hooks.Stop]]
