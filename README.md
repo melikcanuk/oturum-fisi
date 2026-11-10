@@ -42,7 +42,15 @@ Requires Python 3.9+ on your `PATH` (`python3`, `python` or the Windows `py` lau
 
 ## Install in OpenAI Codex
 
-Codex reads its own transcripts (`~/.codex/sessions`) too; one index covers both tools. Codex has no session-end event, so the hook runs on `Stop`. Paste this into Codex and let it do the steps:
+Codex reads its own transcripts (`~/.codex/sessions`) too; one index covers both tools. Codex has no session-end event, so the hook runs on `Stop`. On Windows, run this in PowerShell (not inside Codex, whose sandbox cannot write to `~/.codex`):
+
+```powershell
+irm https://raw.githubusercontent.com/melikcanuk/oturum-fisi/main/codex/install.ps1 | iex
+```
+
+It finds or installs Python, copies the skill, backs up `config.toml`, adds the hook and builds the first index. Then restart Codex and approve the new hook.
+
+Or paste this into Codex and let it do the steps (needs a session that may write outside the workspace):
 
 ```
 Install the oturum-fisi skill and hook from https://github.com/melikcanuk/oturum-fisi by following codex/INSTALL.md in that repo. Ask me before installing Python or editing config.toml. Then run the checks in step 5 and tell me the result.
