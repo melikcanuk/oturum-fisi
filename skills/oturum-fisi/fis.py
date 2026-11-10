@@ -8,6 +8,7 @@ from collections import Counter
 from pathlib import Path
 
 PROJ = Path.home() / ".claude" / "projects"
+CODEX = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex") / "sessions"
 STOP = set("""ve ile bir bu da de mi ne için icin gibi daha çok cok ama olarak şu su o ki ya the and to of a in is for on it that this with you be are not have i me my your we can do""".split())
 FILE_KEYS = ("file_path", "path", "notebook_path")
 
@@ -20,10 +21,26 @@ def text_of(content):
             out.append(b.get("text", ""))
     return "\n".join(out)
 
+def all_paths():
+    return sorted(PROJ.glob("*/*.jsonl")) + sorted(CODEX.glob("**/rollout-*.jsonl"))
+
+def codex_request(t):
+    # Codex puts attached-file lists before the request: keep only the request
+    m = re.search(r"^## My request[^\n]*:\s*\n", t, re.M)
+    return t[m.end():] if m else t
+
 def scan(path):
     first_user = None; start = end = cwd = None
     files = Counter(); words = Counter(); conv_chars = 0
-    usage = {}; turns = 0
+    usage = {}; turns = 0; codex_spent = 0
+    def user_text(t):
+        nonlocal first_user, turns, conv_chars
+        t = t.strip()
+        if not t or t.startswith(("<", "# AGENTS.md")):
+            return
+        turns += 1; conv_chars += len(t)
+        first_user = first_user or t
+        words.update(w for w in re.findall(r"[a-zçğıöşü0-9_-]{4,}", t.lower()) if w not in STOP)
     for line in path.open(encoding="utf-8", errors="replace"):
         try:
             r = json.loads(line)
@@ -35,6 +52,33 @@ def scan(path):
         if ts:
             start = start or ts; end = ts
         cwd = cwd or r.get("cwd")
+        p = r.get("payload")
+        if isinstance(p, dict):  # Codex rollout record
+            if r.get("type") == "session_meta":
+                cwd = cwd or p.get("cwd")
+            elif r.get("type") == "event_msg":
+                if p.get("type") == "user_message":  # older Codex versions
+                    user_text(codex_request(str(p.get("message") or "")))
+                elif p.get("type") == "token_count":
+                    tot = ((p.get("info") or {}).get("total_token_usage") or {}).get("total_tokens")
+                    codex_spent = max(codex_spent, tot or 0)
+                it = p.get("item") if p.get("type") == "item_completed" else None
+                if isinstance(it, dict):
+                    k = it.get("type")
+                    if k == "UserMessage":
+                        user_text(codex_request("\n".join(b.get("text", "") for b in it.get("content") or []
+                                                           if isinstance(b, dict) and b.get("type") == "text")))
+                    elif k == "AgentMessage":
+                        conv_chars += sum(len(b.get("text", "")) for b in it.get("content") or [] if isinstance(b, dict))
+                    elif k == "FileChange":
+                        conv_chars += len(json.dumps(it, ensure_ascii=False))
+                        for f in (it.get("changes") or {}):
+                            if len(f) < 200:
+                                files[f] += 1
+                    elif k in ("CommandExecution", "McpToolCall"):  # the call, not its (huge) output
+                        conv_chars += len(json.dumps({x: it.get(x) for x in ("command", "server", "tool", "arguments")},
+                                                     ensure_ascii=False))
+            continue
         m = r.get("message")
         if not isinstance(m, dict) or r.get("isSidechain"):
             continue
@@ -60,13 +104,14 @@ def scan(path):
                 usage[m["id"]] = sum(u.get(k, 0) or 0 for k in
                     ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     return dict(start=start, end=end, cwd=cwd, first=first_user or "", files=files,
-                words=words, conv_chars=conv_chars, spent=sum(usage.values()), turns=turns)
+                words=words, conv_chars=conv_chars, spent=sum(usage.values()) + codex_spent, turns=turns)
 
 def card(path, s):
     first = re.sub(r"\s+", " ", s["first"])[:90]
     fl = ", ".join(Path(f).name for f, _ in s["files"].most_common(5))
     kw = " ".join(w for w, _ in s["words"].most_common(6))
-    return (f"{(s['start'] or '')[:10]} | {Path(s['cwd'] or '').name} | {path.stem[:8]} | "
+    sid = "codex:" + path.stem[-8:] if path.stem.startswith("rollout-") else path.stem[:8]
+    return (f"{(s['start'] or '')[:10]} | {Path(s['cwd'] or '').name} | {sid} | "
             f"{first} | {fl} | {kw} | {path}")
 
 def hatirla(db, out, sorgu):
@@ -105,13 +150,16 @@ def main():
     if a.only == "-":  # Claude Code hook: JSON on stdin with transcript_path
         try:
             a.only = json.load(sys.stdin).get("transcript_path")
-        except ValueError:
+        except (ValueError, AttributeError, OSError):
             a.only = None
-        if not a.only or not Path(a.only).is_file():
+        if not a.only or not Path(a.only).is_file():  # no usable stdin: take the newest transcript
+            newest = max(all_paths(), key=lambda q: q.stat().st_mtime, default=None)
+            a.only = str(newest) if newest else None
+        if not a.only:
             return
         if not db.exists():  # first run from the hook: index every past session once
             a.only = None
-    paths = [Path(a.only)] if a.only else sorted(PROJ.glob("*/*.jsonl"))
+    paths = [Path(a.only)] if a.only else all_paths()
     rows = []
     for p in paths:
         s = scan(p)

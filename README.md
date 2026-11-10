@@ -1,6 +1,6 @@
 # oturum-fisi
 
-**Session receipts for Claude Code.** Every session becomes one searchable line. A `SessionEnd` hook writes it the moment you close the session. No model, no cloud, no API key, standard-library Python.
+**Session receipts for Claude Code and OpenAI Codex.** Every session becomes one searchable line. A `SessionEnd` hook writes it the moment you close the session. No model, no cloud, no API key, standard-library Python.
 
 *Oturum fişi* is Turkish for "session receipt".
 
@@ -38,7 +38,17 @@ That installs two things:
 - **the hook**: on `SessionEnd` it adds the finished session to `~/.oturum-fisi/INDEX.md`. On its first run it indexes all your past sessions once.
 - **the skill**: when you ask things like "which session did we fix the login in?", Claude runs a recall over the receipts instead of opening transcripts.
 
-Requires Python 3 on your `PATH` (`python3`, `python` or the Windows `py` launcher).
+Requires Python 3.9+ on your `PATH` (`python3`, `python` or the Windows `py` launcher).
+
+## Install in OpenAI Codex
+
+Codex reads its own transcripts (`~/.codex/sessions`) too; one index covers both tools. Codex has no session-end event, so the hook runs on `Stop`. Paste this into Codex and let it do the steps:
+
+```
+Install the oturum-fisi skill and hook from https://github.com/melikcanuk/oturum-fisi by following codex/INSTALL.md in that repo. Ask me before installing Python or editing config.toml. Then run the checks in step 5 and tell me the result.
+```
+
+Manual steps: [codex/INSTALL.md](codex/INSTALL.md).
 
 ## Use it by hand
 
