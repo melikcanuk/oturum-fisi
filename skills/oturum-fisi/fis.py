@@ -134,14 +134,15 @@ def hatirla(db, out, sorgu):
         f.write(f"{datetime.now():%Y-%m-%d %H:%M} sorgu={sorgu!r} eslesen={len(hits)} okunan={okunan} tam={tam} kazanc={kazanc}\n")
     print(f"\nNot: {len(hits)} fis okundu (~{okunan} token). Tam sohbetleri okumak ~{tam} token tutardi; "
           f"~{kazanc} token olasi israf onlendi. Toplam birikmis olasi kazanc: ~{toplam} token. (tahmin: karakter/4, tum sohbetin okunacagi varsayimiyla; fatura olcumu degil)")
-    usd = float(os.environ.get("OTURUM_FISI_USD_PER_MTOK", "10"))  # Fable 5.1 API input price, Oct 2026
     rows = dict(zaman=f"{datetime.now():%Y-%m-%d %H:%M}", sorgu=sorgu, eslesen=len(hits),
-                okunan=okunan, tam=tam, kazanc=kazanc, toplam=toplam, usd=usd,
+                okunan=okunan, tam=tam, kazanc=kazanc, toplam=toplam,
                 oran=(tam // okunan) if okunan else 0)
     print("\n" + fis_metin(rows))
     svg = out / "son-fis.svg"
     svg.write_text(fis_svg(rows), encoding="utf-8")
     print(f"Fis gorseli: {svg}")
+
+FIYAT = (("Fable 5.1", 10), ("Opus 5.5", 4))  # API input price, $ per 1M tokens (Oct 2026)
 
 def tr(n):  # 125504 -> 125.504
     return f"{n:,}".replace(",", ".")
@@ -160,9 +161,9 @@ def fis_metin(r, w=34):
             line("okunan fis", str(r["eslesen"])), line("okunan", f"~{tr(r['okunan'])} tok"),
             line("tam sohbet", f"~{tr(r['tam'])} tok"), line("=" * (w - 4)),
             line("SAVED", f"-{tr(r['kazanc'])} token"), line("oran", f"~{r['oran']}x az token"),
-            line("API fiyati", f"{para(r['tam'], r['usd'])} -> {para(r['okunan'], r['usd'])}"),
+            *[line(ad, f"{para(r['tam'], u)} -> {para(r['okunan'], u)}") for ad, u in FIYAT],
             line("toplam", f"-{tr(r['toplam'])} token"),
-            line("-" * (w - 4)), line(f"tahmin: karakter/4, {r['usd']:g}$/MTok"), " " + "/\\" * ((w - 2) // 2)]
+            line("-" * (w - 4)), line("tahmin; API girdi fiyati"), " " + "/\\" * ((w - 2) // 2)]
     return "\n".join(rows)
 
 def fis_svg(r):
@@ -177,10 +178,10 @@ def fis_svg(r):
             ("lr", "tam sohbet", f"~{tr(r['tam'])} token", 22, 400), ("rule",), ("gap", 8),
             ("big", f"−{tr(r['kazanc'])}", 64), ("c", "token saved", 26, 600), ("gap", 14),
             ("lr", "oran", f"~{r['oran']}× daha az token", 22, 400),
-            ("lr", "API fiyatıyla", f"{para(r['tam'], r['usd'])} → {para(r['okunan'], r['usd'])}", 22, 400),
+            *[("lr", ad, f"{para(r['tam'], u)} → {para(r['okunan'], u)}", 22, 400) for ad, u in FIYAT],
             ("lr", "toplam", f"−{tr(r['toplam'])} token", 22, 600), ("rule",),
             ("l", "tahmin: karakter/4, tüm sohbet okunsaydı", 16, 400),
-            ("l", f"fiyat: {r['usd']:g} $ / 1M girdi token (Fable 5.1 API)", 16, 400)]
+            ("l", "API girdi fiyatı: Fable 5.1 10 $, Opus 5.5 4 $ / 1M token", 16, 400)]
     y, el = 70, []
     for b in body:
         k = b[0]
