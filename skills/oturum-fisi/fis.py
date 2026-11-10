@@ -134,8 +134,10 @@ def hatirla(db, out, sorgu):
         f.write(f"{datetime.now():%Y-%m-%d %H:%M} sorgu={sorgu!r} eslesen={len(hits)} okunan={okunan} tam={tam} kazanc={kazanc}\n")
     print(f"\nNot: {len(hits)} fis okundu (~{okunan} token). Tam sohbetleri okumak ~{tam} token tutardi; "
           f"~{kazanc} token olasi israf onlendi. Toplam birikmis olasi kazanc: ~{toplam} token. (tahmin: karakter/4, tum sohbetin okunacagi varsayimiyla; fatura olcumu degil)")
+    usd = float(os.environ.get("OTURUM_FISI_USD_PER_MTOK", "4"))  # Opus 5.5 API input price, Oct 2026
     rows = dict(zaman=f"{datetime.now():%Y-%m-%d %H:%M}", sorgu=sorgu, eslesen=len(hits),
-                okunan=okunan, tam=tam, kazanc=kazanc, toplam=toplam)
+                okunan=okunan, tam=tam, kazanc=kazanc, toplam=toplam, usd=usd,
+                oran=(tam // okunan) if okunan else 0)
     print("\n" + fis_metin(rows))
     svg = out / "son-fis.svg"
     svg.write_text(fis_svg(rows), encoding="utf-8")
@@ -143,6 +145,10 @@ def hatirla(db, out, sorgu):
 
 def tr(n):  # 125504 -> 125.504
     return f"{n:,}".replace(",", ".")
+
+def para(tok, usd):  # tokens -> "0,50 $" at usd per million tokens
+    v = tok * usd / 1e6
+    return (f"{v:,.2f}" if v >= 0.01 else f"{v:.4f}").replace(",", " ").replace(".", ",").replace(" ", ".") + " $"
 
 def fis_metin(r, w=34):
     """Terminal receipt drawn with plain characters."""
@@ -153,8 +159,10 @@ def fis_metin(r, w=34):
             line("-" * (w - 4)),
             line("okunan fis", str(r["eslesen"])), line("okunan", f"~{tr(r['okunan'])} tok"),
             line("tam sohbet", f"~{tr(r['tam'])} tok"), line("=" * (w - 4)),
-            line("SAVED", f"-{tr(r['kazanc'])} token"), line("toplam", f"-{tr(r['toplam'])} token"),
-            line("-" * (w - 4)), line("tahmin: karakter/4"), " " + "/\\" * ((w - 2) // 2)]
+            line("SAVED", f"-{tr(r['kazanc'])} token"), line("oran", f"~{r['oran']}x az token"),
+            line("API fiyati", f"{para(r['tam'], r['usd'])} -> {para(r['okunan'], r['usd'])}"),
+            line("toplam", f"-{tr(r['toplam'])} token"),
+            line("-" * (w - 4)), line(f"tahmin: karakter/4, {r['usd']:g}$/MTok"), " " + "/\\" * ((w - 2) // 2)]
     return "\n".join(rows)
 
 def fis_svg(r):
@@ -168,8 +176,11 @@ def fis_svg(r):
             ("lr", "okunan", f"~{tr(r['okunan'])} token", 22, 400),
             ("lr", "tam sohbet", f"~{tr(r['tam'])} token", 22, 400), ("rule",), ("gap", 8),
             ("big", f"−{tr(r['kazanc'])}", 64), ("c", "token saved", 26, 600), ("gap", 14),
+            ("lr", "oran", f"~{r['oran']}× daha az token", 22, 400),
+            ("lr", "API fiyatıyla", f"{para(r['tam'], r['usd'])} → {para(r['okunan'], r['usd'])}", 22, 400),
             ("lr", "toplam", f"−{tr(r['toplam'])} token", 22, 600), ("rule",),
-            ("l", "tahmin: karakter/4, tüm sohbet okunsaydı", 16, 400)]
+            ("l", "tahmin: karakter/4, tüm sohbet okunsaydı", 16, 400),
+            ("l", f"fiyat: {r['usd']:g} $ / 1M girdi token (Opus 5.5 API)", 16, 400)]
     y, el = 70, []
     for b in body:
         k = b[0]
